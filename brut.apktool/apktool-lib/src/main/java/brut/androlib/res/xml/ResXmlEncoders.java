@@ -20,13 +20,14 @@ import android.util.TypedValue;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
 public final class ResXmlEncoders {
     private static final Logger LOGGER = Logger.getLogger(ResXmlEncoders.class.getName());
+    // KeyEvent.CHAR_UNDEFINED constant value for Android compatibility
+    private static final char CHAR_UNDEFINED = '\uFFFF';
 
     private ResXmlEncoders() {
         // Private constructor for utility class.
@@ -279,7 +280,7 @@ public final class ResXmlEncoders {
 
     private static boolean isPrintableChar(char ch) {
         Character.UnicodeBlock block = Character.UnicodeBlock.of(ch);
-        return !Character.isISOControl(ch) && ch != KeyEvent.CHAR_UNDEFINED
+        return !Character.isISOControl(ch) && ch != CHAR_UNDEFINED
                 && block != null && block != Character.UnicodeBlock.SPECIALS;
     }
 }
