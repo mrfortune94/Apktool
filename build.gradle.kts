@@ -58,6 +58,8 @@ plugins {
     `java-library`
     `maven-publish`
     signing
+    id("com.android.application") version "8.2.0" apply false
+    id("com.android.library") version "8.2.0" apply false
 }
 
 allprojects {
@@ -76,14 +78,9 @@ allprojects {
 }
 
 subprojects {
-    apply(plugin = "java")
-    apply(plugin = "java-library")
-
-    java {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
+    // Skip applying Java plugin to Android modules
+    // Each module now has its own plugin configuration
+    
     val mavenProjects = arrayOf(
         "brut.j.common", "brut.j.util", "brut.j.dir", "brut.j.xml", "brut.j.yaml",
         "apktool-lib", "apktool-cli"

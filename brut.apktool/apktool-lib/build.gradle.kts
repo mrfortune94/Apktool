@@ -1,3 +1,43 @@
+plugins {
+    id("com.android.library")
+}
+
+android {
+    namespace = "brut.androlib"
+    compileSdk = 34
+
+    defaultConfig {
+        minSdk = 21
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/NOTICE"
+        }
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+}
+
 dependencies {
     api(project(":brut.j.common"))
     api(project(":brut.j.util"))
@@ -17,22 +57,18 @@ dependencies {
 }
 
 tasks {
-    processResources {
-        from("src/main/resources") {
-            include("**/*.jar")
-            duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    register("processResources") {
+        doLast {
+            val resourcesDir = file("src/main/resources")
+            val outputDir = file("build/intermediates/library_assets/debug/packageDebugAssets")
+            outputDir.mkdirs()
+            
+            copy {
+                from(resourcesDir) {
+                    include("**/*.jar")
+                }
+                into(outputDir)
+            }
         }
-        includeEmptyDirs = false
-    }
-
-    test {
-        // https://github.com/iBotPeaches/Apktool/issues/3174 - CVE-2023-22036
-        // Increases validation of extra field of zip header. Some older Android apps
-        // used this field to store data violating the zip specification.
-        systemProperty("jdk.util.zip.disableZip64ExtraFieldValidation", true)
-
-        // Fix for AWT/X11 graphics environment issues in headless environments
-        // Required for tests that use ImageIO operations (nine-patch processing, etc.)
-        systemProperty("java.awt.headless", true)
     }
 }

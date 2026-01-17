@@ -1,102 +1,72 @@
 val gitRevision: String by rootProject.extra
 val apktoolVersion: String by rootProject.extra
-val r8: Configuration by configurations.creating
 
 plugins {
-    application
+    id("com.android.application")
+}
+
+android {
+    namespace = "brut.apktool"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "brut.apktool"
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 1
+        versionName = apktoolVersion
+
+        multiDexEnabled = true
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/NOTICE"
+        }
+    }
 }
 
 dependencies {
     implementation(project(":brut.apktool:apktool-lib"))
     implementation(libs.commons.cli)
     implementation(libs.commons.io)
-    r8(libs.r8)
-}
-
-application {
-    mainClass.set("brut.apktool.Main")
-
-    tasks.run.get().workingDir = file(System.getProperty("user.dir"))
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.core:core:1.12.0")
+    implementation("androidx.multidex:multidex:2.0.1")
 }
 
 tasks {
-    processResources {
-        from("src/main/resources") {
-            include("apktool.properties")
-            expand("version" to apktoolVersion, "gitrev" to gitRevision)
-            duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    register("processResources") {
+        doLast {
+            val resourcesDir = file("src/main/resources")
+            val outputDir = file("build/intermediates/assets/debug/mergeDebugAssets")
+            outputDir.mkdirs()
+            
+            resourcesDir.listFiles()?.forEach { file ->
+                if (file.name == "apktool.properties") {
+                    val content = file.readText()
+                        .replace("\${version}", apktoolVersion)
+                        .replace("\${gitrev}", gitRevision)
+                    File(outputDir, file.name).writeText(content)
+                }
+            }
         }
-        includeEmptyDirs = false
     }
-}
-
-tasks.withType<AbstractArchiveTask>().configureEach {
-    isPreserveFileTimestamps = false
-    isReproducibleFileOrder = true
-}
-
-tasks.register<Delete>("cleanOutputDirectory") {
-    delete(fileTree("build/libs") {
-        exclude("apktool-cli-sources.jar")
-        exclude("apktool-cli-javadoc.jar")
-        exclude("apktool-cli-all.jar")
-    })
-}
-
-val shadowJar = tasks.create("shadowJar", Jar::class) {
-    dependsOn("build")
-    dependsOn("cleanOutputDirectory")
-
-    group = "build"
-    description = "Creates a single executable JAR with all dependencies"
-    manifest.attributes["Main-Class"] = "brut.apktool.Main"
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    val dependencies = configurations
-        .runtimeClasspath
-        .get()
-        .map(::zipTree)
-
-    from(dependencies)
-    with(tasks.jar.get())
-}
-
-tasks.register<JavaExec>("proguard") {
-    dependsOn("shadowJar")
-
-    onlyIf {
-        JavaVersion.current().isJava11Compatible
-    }
-
-    val proguardRules = file("proguard-rules.pro")
-    val originalJar = shadowJar.outputs.files.singleFile
-
-    inputs.files(originalJar.toString(), proguardRules)
-    outputs.file("build/libs/apktool-$apktoolVersion.jar")
-
-    classpath(r8)
-    mainClass.set("com.android.tools.r8.R8")
-
-    args = mutableListOf(
-        "--release",
-        "--classfile",
-        "--no-minification",
-        "--map-diagnostics:UnusedProguardKeepRuleDiagnostic", "info", "none",
-        "--lib", javaLauncher.get().metadata.installationPath.toString(),
-        "--output", outputs.files.singleFile.toString(),
-        "--pg-conf", proguardRules.toString(),
-        originalJar.toString()
-    )
-}
-
-tasks.withType<org.gradle.api.publish.maven.tasks.PublishToMavenRepository> {
-    dependsOn(tasks.named("shadowJar"))
-}
-
-tasks.withType<org.gradle.plugins.signing.Sign> {
-    dependsOn(tasks.named("shadowJar"))
-}
-
-tasks.withType<org.gradle.api.publish.tasks.GenerateModuleMetadata> {
-    dependsOn(tasks.named("shadowJar"))
 }

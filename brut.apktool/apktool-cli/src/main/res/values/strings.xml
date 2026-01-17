@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Apktool</string>
+    <string name="command_hint">Enter apktool command (e.g., d app.apk)</string>
+    <string name="execute_command">Execute</string>
+</resources>
